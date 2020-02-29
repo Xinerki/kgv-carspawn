@@ -10,6 +10,12 @@ Citizen.CreateThread(function()
 			Citizen.CreateThread(function()
 				SwitchOutPlayer(PlayerPedId(), 0, 2)
 				
+				SetPlayerControl(PlayerId(), false, 0)
+				
+				if IsPedInAnyVehicle(PlayerPedId(), false) then
+					TaskVehicleDriveWander(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), false), 10.0, 0)
+				end
+				
 				repeat Wait(0) until GetPlayerSwitchState() == 3
 				RequestModel(carModel)
 				-- BeginTextCommandBusyspinnerOn("STRING")
@@ -40,6 +46,8 @@ Citizen.CreateThread(function()
 				
 				SetPedIntoVehicle(PlayerPedId(), car, -1)
 				
+				FreezeEntityPosition(car, true)
+				
 				Wait(50)
 				
 				if veh == true then 
@@ -55,6 +63,13 @@ Citizen.CreateThread(function()
 				SetModelAsNoLongerNeeded(carModel)
 				
 				SwitchInPlayer(PlayerPedId())
+				
+				repeat Wait(0) until HasCollisionLoadedAroundEntity(PlayerPedId())
+				
+				SetPlayerControl(PlayerId(), true, 0)
+				
+				FreezeEntityPosition(car, false)
+				SetVehicleOnGroundProperly(car)
 			end)
 		end
 	end, false)
@@ -195,6 +210,9 @@ Citizen.CreateThread(function()
 			-- BusyspinnerOff()
 			
 			local car = CreateVehicle(carModel, -45.65, -1826.75, 25.85, -39.7, true, true)
+			SetVehRadioStation(car, "RADIO_01_CLASS_ROCK")
+			SetVehicleRadioLoud(car, true)
+			
 			local ped = CreatePedInsideVehicle(car, 4, pedHash, -1, true, true)
 			SetBlockingOfNonTemporaryEvents(ped, true)
 			
@@ -210,8 +228,8 @@ Citizen.CreateThread(function()
 			local x, y, z = table.unpack(vec3)
 			-- print(vec3)
 			
-			-- drivingFlag = 1074528293
-			drivingFlag = 786980
+			drivingFlag = 1074528293
+			-- drivingFlag = 786980
 			
 			TaskVehicleDriveToCoord(ped, car, x, y, z, 500.0, 0.0, carModel, drivingFlag, 20.0, true)
 			
@@ -228,6 +246,8 @@ Citizen.CreateThread(function()
 			BringVehicleToHalt(car, 10.0, 1000, 0)
 			SetGameplayVehicleHint(car, 0.0, 0.0, 0.0, true, 2500, 1500, 1500)
 			
+			SetPedVehicleForcedSeatUsage(PlayerPedId(), car, 0, 2)
+			
 			repeat Wait(0)
 				if IsPedDeadOrDying(ped) or IsEntityDead(car) then
 					SetEntityAsNoLongerNeeded(ped)
@@ -240,15 +260,16 @@ Citizen.CreateThread(function()
 			
 			-- print("forcing player to backseat")
 			
-			ClearPedTasks(PlayerPedId())
+			-- ClearPedTasks(PlayerPedId())
 			
-			local seat = 2
-			if GetVehicleModelNumberOfSeats(carModel) < 4 then
-				seat = 0
-			end
+			-- local seat = 2
+			-- if GetVehicleModelNumberOfSeats(carModel) < 4 then
+				-- seat = 0
+			-- end
 			
 			-- Wait(500)
-			TaskEnterVehicle(PlayerPedId(), car, 15000, seat, 1, 0)
+			-- TaskEnterVehicle(PlayerPedId(), car, 15000, seat, 1, 0)
+			
 			RemoveBlip(blip)
 			
 			repeat Wait(0) until IsPedInVehicle(PlayerPedId(), car, false) and IsWaypointActive()
@@ -269,6 +290,7 @@ Citizen.CreateThread(function()
 				end
 			until GetDistanceBetweenCoords(x, y, z, GetEntityCoords(car)) < 100.0
 			
+			BringVehicleToHalt(car, 10.0, 1000, 0)
 			TaskLeaveVehicle(PlayerPedId(), car, 0)
 			
 			repeat Wait(0) until not IsPedInVehicle(PlayerPedId(), car, true)
