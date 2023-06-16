@@ -1,0 +1,5 @@
+fx_version 'adamant'
+game 'gta5'
+name 'kgv-carspawn'
+description 'i hate trainers'
+client_script 'client.lua'
