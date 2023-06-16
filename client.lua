@@ -30,7 +30,7 @@ Citizen.CreateThread(function()
 				success, vec3, heading = GetRandomVehicleNode(x,y,z, 500.0, 1, true, true)
 				success, vec3, heading = GetClosestVehicleNodeWithHeading(vec3.x, vec3.y, vec3.z, 1, 3, 0)
 				
-				local oldped = ClonePed(PlayerPedId(), 0.0, true, true)
+				local oldped = ClonePed(PlayerPedId(), true, false, true)
 				local veh = false
 				if IsPedInAnyVehicle(PlayerPedId(), false) then
 					veh = true
@@ -38,15 +38,34 @@ Citizen.CreateThread(function()
 				end
 				
 				RequestCollisionAtCoord(vec3.x, vec3.y, vec3.z)
+				
+				if IsThisModelAHeli(carModel) or IsThisModelAPlane(carModel) then
+					vec3 = vec3 + vector3(0.0, 0.0, 150.0)
+				end
+				
 				local car = CreateVehicle(carModel, vec3, heading, true, true)
 				
 				local dim = GetModelDimensions(carModel)
 				vec3 = GetOffsetFromEntityInWorldCoords(car, dim.x, 0.0, 0.0)
+				
 				SetEntityCoords(car, vec3)
+				SetEntityRotation(car, 0.0, 0.0, heading)
+				
+				if IsThisModelAHeli(carModel) then
+					SetHeliBladesFullSpeed(car)
+					ControlLandingGear(car, 3)
+				end
 				
 				SetPedIntoVehicle(PlayerPedId(), car, -1)
 				
 				FreezeEntityPosition(car, true)
+				
+				if IsThisModelAPlane(carModel) then
+					TaskVehicleTempAction(PlayerPedId(), car, 9, 3000)
+					SetHeliBladesFullSpeed(car)
+					ControlLandingGear(car, 3)
+					-- Wait(2000)
+				end
 				
 				Wait(50)
 				
@@ -59,17 +78,28 @@ Citizen.CreateThread(function()
 				
 				SetEntityAsNoLongerNeeded(oldped)
 				
-				SetEntityAsNoLongerNeeded(car)
-				SetModelAsNoLongerNeeded(carModel)
-				
 				SwitchInPlayer(PlayerPedId())
 				
 				repeat Wait(0) until HasCollisionLoadedAroundEntity(PlayerPedId())
 				
+				-- Wait(2000)
+				-- SetEntityRotation(car, 0.0, 0.0, heading)
+				-- Wait(100)
+				-- SetVehicleForwardSpeed(car, 30.0)
+				
 				SetPlayerControl(PlayerId(), true, 0)
 				
 				FreezeEntityPosition(car, false)
-				SetVehicleOnGroundProperly(car)
+				if IsThisModelAPlane(carModel) then
+					SetEntityRotation(car, 0.0, 0.0, heading)
+					Wait(50)
+					SetVehicleForwardSpeed(car, 200.0)
+				else
+					SetVehicleOnGroundProperly(car)
+				end
+				
+				SetEntityAsNoLongerNeeded(car)
+				SetModelAsNoLongerNeeded(carModel)
 			end)
 		end
 	end, false)
@@ -100,6 +130,38 @@ Citizen.CreateThread(function()
 				local car = CreateVehicle(carModel, x, y, z+50.0, heading, true, true)
 				
 				SetEntityVelocity(car, 0.0, 0.0, -50.0)
+				
+				Wait(1000)
+				
+				SetEntityAsNoLongerNeeded(car)
+				SetModelAsNoLongerNeeded(carModel)
+			end)
+		end
+	end, false)
+
+	TriggerEvent('chat:addSuggestion', '/get', 'just get it!', { {name='MODEL', help="man just take it"} } )
+	RegisterCommand("get", function(source, args, rawCommand)
+		if args[1] then
+			carModel = GetHashKey(args[1])
+			if not IsModelValid(carModel) then return end
+			if not IsModelInCdimage(carModel) then return end
+			if not IsModelAVehicle(carModel) then return end
+			Citizen.CreateThread(function()
+			
+				-- BeginTextCommandBusyspinnerOn("STRING")
+				-- AddTextComponentString("LOADING "..args[1]:upper())
+				-- EndTextCommandBusyspinnerOn(1)
+				RequestModel(carModel)
+				repeat Wait(0) until HasModelLoaded(carModel)
+				-- BusyspinnerOff()
+			
+				local pos = GetEntityCoords(PlayerPedId())
+				local heading = GetEntityHeading(PlayerPedId())
+					
+				local car = CreateVehicle(carModel, pos, heading, true, true)
+				
+				SetPedIntoVehicle(PlayerPedId(), car, -1)
+				-- SetEntityVelocity(car, 0.0, 0.0, -50.0)
 				
 				Wait(1000)
 				
@@ -268,6 +330,10 @@ Citizen.CreateThread(function()
 			
 			local ped = CreatePedInsideVehicle(car, 4, pedHash, -1, true, true)
 			SetBlockingOfNonTemporaryEvents(ped, true)
+			SetPedConfigFlag(ped, 251, true)
+			
+			SetDriverAbility(ped, 1.0)
+			SetDriverAggressiveness(ped, 1.0)
 			
 			local x, y, z = table.unpack(GetEntityCoords(PlayerPedId()))
 			success, vec3, heading = GetClosestVehicleNodeWithHeading(x, y, z, 1, 3, 0)
@@ -282,6 +348,7 @@ Citizen.CreateThread(function()
 			-- print(vec3)
 			
 			drivingFlag = 1074528293
+			-- drivingFlag = 786734
 			-- drivingFlag = 786980
 			
 			TaskVehicleDriveToCoord(ped, car, x, y, z, 500.0, 0.0, carModel, drivingFlag, 20.0, true)
@@ -302,8 +369,13 @@ Citizen.CreateThread(function()
 			-- if GetVehicleModelNumberOfSeats(carModel) < 4 then
 				-- SetPedVehicleForcedSeatUsage(PlayerPedId(), car, 0, 2)
 			-- else
-				SetPedVehicleForcedSeatUsage(PlayerPedId(), car, 0, 2)
+				-- SetPedVehicleForcedSeatUsage(PlayerPedId(), car, 2, 0)
 			-- end
+			
+			-- Citizen.InvokeNative(0x952F06BEECD775CC, PlayerPedId(), car, 2, 0, -2)
+			
+			-- SetPedVehicleForcedSeatUsage(PlayerPedId(), car, 0, 2)
+			-- Citizen.InvokeNative(0XA4885BC60A517BA5, PlayerPedId(), car, true)
 			
 			repeat Wait(0)
 				if IsPedDeadOrDying(ped) or IsEntityDead(car) then
