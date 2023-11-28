@@ -104,6 +104,89 @@ Citizen.CreateThread(function()
 		end
 	end, false)
 
+	TriggerEvent('chat:addSuggestion', '/order', 'order a delivery!', { {name='MODEL', help="car model bro"} })
+	RegisterCommand("order", function(source, args, rawCommand)
+		if args[1] then
+			carModel = GetHashKey(args[1])
+			if not IsModelValid(carModel) then return end
+			if not IsModelInCdimage(carModel) then return end
+			if not IsModelAVehicle(carModel) then return end
+			Citizen.CreateThread(function()
+				RequestModel(carModel)
+				repeat Wait(0) until HasModelLoaded(carModel)
+
+				-- local heliModel = `cargobob4`
+				local heliModel = `cargobob`
+				RequestModel(heliModel)
+				repeat Wait(0) until HasModelLoaded(heliModel)
+
+				local pedModel = `s_m_m_ciasec_01`
+				RequestModel(pedModel)
+				repeat Wait(0) until HasModelLoaded(pedModel)
+			
+				local x, y, z = table.unpack(GetEntityCoords(PlayerPedId()))
+				success, vec3, heading = GetClosestVehicleNodeWithHeading(x, y, z, 1, 3, 0)
+				if vec3 == vector3(0,0,0) then vec3 = GetEntityCoords(PlayerPedId()) end
+				local destination = vec3
+
+				local angle = math.random(360)
+				local x = math.sin(math.rad(angle)) * 250.0
+				local y = math.cos(math.rad(angle)) * 250.0
+				local z = 50.0
+				local heliPos = GetEntityCoords(PlayerPedId()) + vector3(x, y, 0.0)
+				
+				success, vec3, heading = GetClosestVehicleNodeWithHeading(heliPos.x, heliPos.y, heliPos.z, 1, 3, 0)
+				if vec3 == vector3(0,0,0) then vec3 = heliPos end
+
+				local heli = CreateVehicle(heliModel, vec3.x, vec3.y, vec3.z + z, heading, true, true)
+				SetHeliBladesFullSpeed(heli)
+				local ped = CreatePedInsideVehicle(heli, 4, pedModel, -1, true, true)
+				SetBlockingOfNonTemporaryEvents(ped, true)
+				local car = CreateVehicle(carModel, heliPos.x, heliPos.y, z - 7.0, heading, true, true)
+				Wait(100)
+				CreatePickUpRopeForCargobob(heli, 0)
+				-- N_0x56eb5e94318d3fb6(heli, true)
+				Wait(100)
+				-- SetCargobobPickupMagnetReducedStrength(heli, car)
+				-- SetCargobobPickupMagnetActive(heli, true)
+				AttachVehicleToCargobob(heli, car, -1, 0.0, 0.0, 0.0)
+
+				TaskHeliMission(ped, heli, nil, nil, destination.x, destination.y, destination.z + 10.0, 4, 25.0, 5.0, -1, 100, 20)
+				
+				local delivered = false
+				local atLocationTime = 0
+
+				while not delivered do Wait(0)
+					local dist = #(GetEntityCoords(heli) - (destination + vector3(0.0, 0.0, 20.0))).xy
+					if GlobalState.debug then
+						print(dist, atLocationTime)
+					end
+					if dist < 10.0 then
+						atLocationTime = atLocationTime + GetFrameTime()
+						if atLocationTime > 8.0 then
+							delivered = true
+						end
+					else
+						atLocationTime = 0
+					end
+				end
+
+				-- SetCargobobPickupMagnetActive(heli, false)
+				DetachVehicleFromCargobob(heli, car)
+				Wait(100)
+				TaskHeliMission(ped, heli, nil, nil, destination.x, destination.y, destination.z + 20.0, 8, 100.0, 2.0, -1, 100, 20)
+				Wait(100)
+				
+				SetEntityAsNoLongerNeeded(ped)
+				SetModelAsNoLongerNeeded(pedModel)
+				SetEntityAsNoLongerNeeded(heli)
+				SetModelAsNoLongerNeeded(heliModel)
+				SetEntityAsNoLongerNeeded(car)
+				SetModelAsNoLongerNeeded(carModel)
+			end)
+		end
+	end)
+
 	TriggerEvent('chat:addSuggestion', '/drop', 'drop acar!', { {name='MODEL', help="car model bro"} } )
 	RegisterCommand("drop", function(source, args, rawCommand)
 		if args[1] then
@@ -139,6 +222,7 @@ Citizen.CreateThread(function()
 		end
 	end, false)
 
+	--[[
 	TriggerEvent('chat:addSuggestion', '/get', 'just get it!', { {name='MODEL', help="man just take it"} } )
 	RegisterCommand("get", function(source, args, rawCommand)
 		if args[1] then
@@ -170,6 +254,7 @@ Citizen.CreateThread(function()
 			end)
 		end
 	end, false)
+	]]
 
 	TriggerEvent('chat:addSuggestion', '/summon', 'delivered car!', { {name='MODEL', help="car model bro"} } )
 	RegisterCommand("summon", function(source, args, rawCommand)
